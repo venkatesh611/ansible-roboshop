@@ -4,7 +4,7 @@
   vars:
     ami_id: ami-0220d79f3f480ecf5
     sg_id: sg-05128620531a028ae # replace with your SG ID
-    zone_id: "Z0948150OFPSYTNVYZOY" # replace with your ID
+    zone_id:  "Z042165215OGXF50J2MYU" #"Z0948150OFPSYTNVYZOY" # replace with your ID
     domain_name: "venkatapp.fun"
     # we can pass instances through command line using -e
     instances: 

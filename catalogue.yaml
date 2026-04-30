@@ -1,0 +1,193 @@
+
+
+
+
+- name: Setup Catalogue Server
+  hosts: catalogue
+  become: yes   # Run all tasks with sudo/root privileges
+
+  tasks:
+
+   # Disable the default Node.js module (to avoid version conflicts)
+   - name: Disable default Node.js module
+     ansible.builtin.command: dnf module disable nodejs -y
+
+   # Enable required Node.js version (v20)
+   - name: Enable required Node.js version
+     ansible.builtin.command: dnf module enable nodejs:20 -y
+
+   # Install Node.js package
+   - name: Install Node.js
+     ansible.builtin.package:
+      name: nodejs
+      state: present
+
+   # Create a dedicated system user for the application (no login access)
+   - name: Create roboshop system user
+     ansible.builtin.user:
+      name: roboshop
+      comment: RoboShop System user
+      system: true
+      shell: /sbin/nologin
+      home: /app
+
+   # Remove existing /app directory if present (ensures clean deployment)
+   # Safe because code will be freshly downloaded again
+   - name: Remove existing app directory
+     ansible.builtin.file:
+      path: /app
+      state: absent
+
+   # Create /app directory where application code will reside
+   - name: Create app directory
+     ansible.builtin.file:
+      path: /app
+      state: directory
+
+   # Remove any previously downloaded artifact from /tmp
+   - name: Remove old catalogue zip file
+     ansible.builtin.file:
+      path: /tmp/catalogue.zip
+      state: absent
+
+   # Download latest application code from S3
+   - name: Download catalogue code from S3
+     ansible.builtin.get_url:
+      url: https://roboshop-artifacts.s3.amazonaws.com/catalogue-v3.zip
+      dest: /tmp/catalogue.zip
+
+   # Extract the downloaded zip into /app directory
+   - name: Extract application code
+     ansible.builtin.unarchive:
+      src: /tmp/catalogue.zip
+      dest: /app
+      remote_src: yes   # File already exists on target server
+
+   # Install Node.js dependencies defined in package.json
+   - name: Install Node.js dependencies
+     community.general.npm:
+      path: /app
+
+   # Copy systemd service file to manage the catalogue service
+   - name: Copy catalogue service file
+     ansible.builtin.copy:
+      src: catalogue.service
+      dest: /etc/systemd/system/catalogue.service
+
+   # Copy MongoDB repository configuration (required for installing client)
+   - name: Copy MongoDB repo file
+     ansible.builtin.copy:
+      src: mongo.repo
+      dest: /etc/yum.repos.d/mongo.repo
+
+   # Install MongoDB shell client (mongosh)
+   - name: Install MongoDB client
+     ansible.builtin.package:
+      name: mongodb-mongosh
+      state: present
+
+   # Check if "catalogue" database already exists in MongoDB
+   # Returns index >= 0 if exists, -1 if not exists
+   - name: Check catalogue DB existence
+     ansible.builtin.command: mongosh mongodb.daws86s.fun --quiet --eval "db.getMongo().getDBNames().indexOf('catalogue')"
+     register: catalogue_output
+
+   # Load initial product data into MongoDB ONLY if DB does not exist
+   - name: Load products into MongoDB
+     ansible.builtin.shell: mongosh --host mongodb.daws86s.fun </app/db/master-data.js
+     when: catalogue_output.stdout | int < 0
+
+   # Reload systemd (to pick new service file), enable and start service
+   - name: Enable and start catalogue service
+     ansible.builtin.systemd_service:
+      name: catalogue
+      enabled: true     # Start service on boot
+      state: started    # Ensure service is running
+      daemon_reload: true  # Reload systemd configs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# - name: setup catalogue server
+#   hosts: catalogue
+#   become: yes
+#   tasks:
+#    - name: disable default node
+#      ansible.builtin.command: dnf module disable nodejs -y
+#    - name: enable neede version
+#      ansible.builtin.command: dnf module enable nodejs:20 -y
+#    - name: install node js
+#      ansible.builtin.package:
+#       name: nodejs
+#       state: present
+#    - name: create roboshop system user
+#      ansible.builtin.user:
+#       name: roboshop
+#       comment: RoboShop System user
+#       system: true
+#       shell: /sbin/nologin
+#       home: /app
+#    # Safe to remove directory, because 2nd time if we run it will download freshly. no error if does not exist
+#    - name: remove app directory
+#      ansible.builtin.file:
+#       path: /app
+#       state: absent
+#    - name: create app directory
+#      ansible.builtin.file:
+#       path: /app
+#       state: directory
+#    - name: delete app code in temp directory
+#      ansible.builtin.file:
+#       path: /tmp/catalogue.zip
+#       state: absent
+#    - name: get code from s3
+#      ansible.builtin.get_url:
+#       url: https://roboshop-artifacts.s3.amazonaws.com/catalogue-v3.zip
+#       dest: /tmp/catalogue.zip
+#    - name: unzip code in app
+#      ansible.builtin.unarchive:
+#       src: /tmp/catalogue.zip
+#       dest: /app
+#       remote_src: yes # this means already remote server or target node have this file (we done in above steps)
+#    - name: install dependencies
+#      community.general.npm:
+#       path: /app
+#    - name: copy catalogue service
+#      ansible.builtin.copy:
+#       src: catalogue.service
+#       dest: /etc/systemd/system/catalogue.service
+#    - name: copy mongo repo
+#      ansible.builtin.copy:
+#       src: mongo.repo
+#       dest: /etc/yum.repos.d/mongo.repo
+#    - name: install mongodb client
+#      ansible.builtin.package:
+#       name: mongodb-mongosh
+#       state: present
+#    - name: connnect to mongodb catalogue
+#      ansible.builtin.command: mongosh mongodb.daws86s.fun --quiet --eval "db.getMongo().getDBNames().indexOf('catalogue')"
+#      register: catalogue_output
+#    - name: load products into mongodb
+#      ansible.builtin.shell: mongosh --host mongodb.daws86s.fun </app/db/master-data.js
+#      when: catalogue_output.stdout | int < 0
+#    - name: daemon reload enable and start
+#      ansible.builtin.systemd_service:
+#       name: catalogue
+#       enabled: true
+#       state: started
+#       daemon_reload: true

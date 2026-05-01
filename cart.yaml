@@ -36,7 +36,7 @@
    - name: unzip the file
      ansible.builtin.unarchive:
       src: /tmp/cart.zip
-      path: /app
+      dest: /app
       remote_src: yes
    - name: install npm modules
      community.general.npm:

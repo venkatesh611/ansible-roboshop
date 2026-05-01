@@ -3,13 +3,16 @@
   become: yes
   tasks:
    - name: disable default nodejs 
-     ansible.builtin.command: dnf module disable nodejs
+     ansible.builtin.command: dnf module disable nodejs -y
+
    - name: enable nodejs 20 version
-     ansible.builtin.command: dnf module enable nodejs:20
+     ansible.builtin.command: dnf module enable nodejs:20 -y
+
    - name: install nodejs 
      ansible.builtin.package:
       name: nodejs
       state: present
+
    - name: create a system user
      ansible.builtin.user:
       name: roboshop
@@ -17,14 +20,15 @@
       system: true
       shell: /sbin/nologin
       home: /app
+
    - name: removing app directory
      ansible.builtin.file:
       path: /app
       state: absent
    - name: creating app directory
      ansible.builtin.file:
-     path: /app
-     state: directory
+      path: /app
+      state: directory
    - name: remove tmp/user.zip
      ansible.builtin.file:
       state: absent
@@ -35,14 +39,14 @@
       dest: /tmp/user.zip
    - name: unzip in /app
      ansible.builtin.unarchive:
-     src: /tmp/user.zip
-     path: /app 
-     remote_src: yes
+      src: /tmp/user.zip
+      path: /app 
+      remote_src: yes
    - name: install node modules
      community.general.npm:
       path: /app
    - name: copy service file
-     ansible.builtin.file:
+     ansible.builtin.copy:
       src: user.service
       dest: /etc/systemd/system/user.service
    - name: start and enable

@@ -3,9 +3,9 @@
   become: yes
   tasks:
    - name: disable dafault nodejs
-     ansible.builtin.command: dnf module disable nodejs
+     ansible.builtin.command: dnf module disable nodejs -y
    - name: enable nodejs 20 version
-     ansible.builtin.command: dnf module enable nodejs:20
+     ansible.builtin.command: dnf module enable nodejs:20 -y
    - name: install node js
      ansible.builtin.dnf:
       name: nodejs

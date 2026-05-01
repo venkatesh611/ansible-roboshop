@@ -40,7 +40,7 @@
    - name: unzip in /app
      ansible.builtin.unarchive:
       src: /tmp/user.zip
-      path: /app 
+      dest: /app 
       remote_src: yes
    - name: install node modules
      community.general.npm:

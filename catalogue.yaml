@@ -89,12 +89,12 @@
    # Check if "catalogue" database already exists in MongoDB
    # Returns index >= 0 if exists, -1 if not exists
    - name: Check catalogue DB existence
-     ansible.builtin.command: mongosh mongodb.daws86s.fun --quiet --eval "db.getMongo().getDBNames().indexOf('catalogue')"
+     ansible.builtin.command: mongosh mongodb.venkatapp.fun --quiet --eval "db.getMongo().getDBNames().indexOf('catalogue')"
      register: catalogue_output
 
    # Load initial product data into MongoDB ONLY if DB does not exist
    - name: Load products into MongoDB
-     ansible.builtin.shell: mongosh --host mongodb.daws86s.fun </app/db/master-data.js
+     ansible.builtin.shell: mongosh --host mongodb.venkatapp.fun </app/db/master-data.js
      when: catalogue_output.stdout | int < 0
 
    # Reload systemd (to pick new service file), enable and start service

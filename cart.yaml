@@ -34,23 +34,27 @@
      ansible.builtin.file:
       path: /tmp/cart.zip
       state: absent
-      
+
    - name: downloading the code
      ansible.builtin.get_url:
       url: https://roboshop-artifacts.s3.amazonaws.com/cart-v3.zip
       dest: /tmp/cart.zip
+
    - name: unzip the file
      ansible.builtin.unarchive:
       src: /tmp/cart.zip
       dest: /app
       remote_src: yes
+
    - name: install npm modules
      community.general.npm:
       path: /app
+
    - name: copy service file
      ansible.builtin.copy:
       src: cart.service
       dest: /etc/systemd/system/cart.service
+      
    - name: start service
      ansible.builtin.systemd_service:
       name: cart
